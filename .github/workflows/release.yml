@@ -1,0 +1,99 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Extract version tag
+        id: extract_tag
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Find Dockerfile
+        id: find_dockerfile
+        run: |
+          if [ -f "trivy/dockerfile_path.txt" ]; then
+            DOCKERFILE_PATH=$(cat trivy/dockerfile_path.txt)
+            echo "dockerfile path: $DOCKERFILE_PATH"
+          else
+            echo "# trivy/dockerfile_path.txt not found!" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          if [ -z "$DOCKERFILE_PATH" ]; then
+            echo "# Dockerfile path is empty!" >> $GITHUB_STEP_SUMMARY
+            echo "## No docker image will be scanned"
+            exit 1
+          fi
+          echo "dockerfile_path=$DOCKERFILE_PATH" >> $GITHUB_ENV
+
+      - name: Replace / with - in dockerfile path and remove the dockerfile extension
+        id: dockerhub_tag
+        run: |
+          dockerhub_tag=$(echo "${{ env.dockerfile_path }}" | sed 's/\//-/g' | sed 's/\Dockerfile//g')
+          echo "dockerhub_tag=${dockerhub_tag}" >> $GITHUB_ENV
+
+      - name: Retrieve just the first folder name from the dockerfile path aka the version of python
+        id: python_version
+        run: |
+          python_version=$(echo "${{ env.dockerfile_path }}" | sed 's/\//-/g' | cut -d '-' -f 1)
+          echo "python_version=${python_version}" >> $GITHUB_ENV
+
+      - name: Build and push Docker image
+        run: |
+          docker buildx build --no-cache \
+            --build-arg IMAGE_VERSION=${{ env.TAG }} \
+            --platform linux/amd64,linux/arm64 \
+            -t ${{ secrets.REPO }}:${{ env.TAG }}-${{ env.dockerhub_tag }}python \
+            -f  ${{env.dockerfile_path}} \
+            --push .
+
+      - name: latest tag
+        run: |
+          docker buildx imagetools create --tag ${{ secrets.REPO }}:latest \
+          ${{ secrets.REPO }}:${{ env.TAG }}-${{ env.dockerhub_tag }}python
+
+      - name: tag ${{ env.TAG }}
+        run: |
+          docker buildx imagetools create --tag ${{ secrets.REPO }}:${{ env.TAG }} \
+          ${{ secrets.REPO }}:${{ env.TAG }}-${{ env.dockerhub_tag }}python
+
+      - name: tag ${{ env.python_version }}
+        run: |
+          docker buildx imagetools create --tag ${{ secrets.REPO }}:${{ env.python_version }} \
+          ${{ secrets.REPO }}:${{ env.TAG }}-${{ env.dockerhub_tag }}python
+
+      - name: tag ${{ env.python_version }}-slim
+        run: |
+          docker buildx imagetools create --tag ${{ secrets.REPO }}:${{ env.python_version }}-slim \
+          ${{ secrets.REPO }}:${{ env.TAG }}-${{ env.dockerhub_tag }}python
+
+      - name: Build and push Docker image
+        run: |
+          docker buildx build --no-cache \
+            --build-arg IMAGE_VERSION=${{ env.TAG }} \
+            --platform linux/amd64,linux/arm64 \
+            -t ${{ secrets.REPO }}:${{ env.TAG }}-3.11-bookworm-python \
+            -f  3.11/bookworm/Dockerfile \
+            --push .
+
+      - name: tag ${{ env.python_version }}-debian
+        run: |
+          docker buildx imagetools create --tag ${{ secrets.REPO }}:${{ env.python_version }}-debian \
+          ${{ secrets.REPO }}:${{ env.TAG }}-3.11-bookworm-python

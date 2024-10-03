@@ -1,0 +1,119 @@
+name: Docker Scan
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  docker_scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Get branch name
+        id: get_branch
+        run: echo "branch_name=${GITHUB_HEAD_REF}" >> $GITHUB_ENV
+
+      - name: Shorten slug
+        id: shorten
+        run: |
+          short_slug=$(echo "${{ env.branch_name }}" | sed -e "s/feature/f/" | sed 's/[\/:.]/-/g' | cut -c -20 | sed -e "s/-$//" )
+          echo "slug=${short_slug}" >> $GITHUB_ENV
+
+      - name: Find Dockerfile
+        id: find_dockerfile
+        run: |
+          if [ -f "trivy/dockerfile_path.txt" ]; then
+            DOCKERFILE_PATH=$(cat trivy/dockerfile_path.txt)
+            echo "dockerfile path: $DOCKERFILE_PATH"
+          else
+            echo "# trivy/dockerfile_path.txt not found!" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          if [ -z "$DOCKERFILE_PATH" ]; then
+            echo "# Dockerfile path is empty!" >> $GITHUB_STEP_SUMMARY
+            echo "## No docker image will be scanned"
+            exit 1
+          fi
+          echo "dockerfile_path=$DOCKERFILE_PATH" >> $GITHUB_ENV
+
+      - name: Build and Docker image
+        run: |
+          docker build -t scan:${{ env.slug }} -f ${{ env.dockerfile_path }} .
+
+      - name: Scan Docker image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: scan:${{ env.slug }}
+          format: "template"
+          template: "@trivy/template_md.tpl"
+          output: "trivy_report.md"
+          ignore-unfixed: false
+          severity: "HIGH,CRITICAL"
+
+      - name: Display scan results
+        if: always()
+        run: |
+          if [[ -s trivy_report.md ]]; then
+            {
+              echo "## Trivy Scan Results" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### Summary" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "The following vulnerabilities were found in the Docker image: ${{ env.dockerfile_path }}"  >> $GITHUB_STEP_SUMMARY
+              echo "<details><summary>Click to expand</summary>" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              cat trivy_report.md >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "</details>" >> $GITHUB_STEP_SUMMARY
+            }
+          fi
+  fs_scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get branch name
+        id: get_branch
+        run: echo "branch_name=${GITHUB_HEAD_REF}" >> $GITHUB_ENV
+
+      - name: Shorten slug
+        id: shorten
+        run: |
+          short_slug=$(echo "${{ env.branch_name }}" | sed -e "s/feature/f/" | sed 's/[\/:.]/-/g' | cut -c -20 | sed -e "s/-$//" )
+          echo "slug=${short_slug}" >> $GITHUB_ENV
+
+      - name: Scan filesystem with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          format: "template"
+          template: "@trivy/template_md.tpl"
+          output: "trivy_fs_report.md"
+          ignore-unfixed: true
+          scanners: "vuln,secret,config"
+          severity: "HIGH,CRITICAL"
+
+      - name: Display Repo filesystem scan results
+        if: always()
+        run: |
+          if [[ -s trivy_fs_report.md ]]; then
+            {
+              echo "## Trivy Filesystem Scan Results" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### Summary" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "The following vulnerabilities were found in the filesystem:"  >> $GITHUB_STEP_SUMMARY
+              echo "<details><summary>Click to expand</summary>" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              cat trivy_fs_report.md >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "</details>" >> $GITHUB_STEP_SUMMARY
+            }
+          fi
