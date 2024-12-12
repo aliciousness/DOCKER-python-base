@@ -119,12 +119,12 @@ jobs:
             * **Severity**: \(.vulnerability.severity)
             * **Installed Version**: \(.artifact.version)
             * **Fixed Version**: \(.vulnerability.fix.state // "N/A")"
-          ' ${{ steps.grype.outputs.json }} > grype_report.md
+          ' ${{ steps.grype.outputs.json }} > grype_fs_report.md
 
       - name: Display Repo filesystem scan results
         if: always()
         run: |
-          if [[ -s grype_report.md ]]; then
+          if [[ -s grype_fs_report.md ]]; then
             {
               echo "## Trivy Filesystem Scan Results" >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
@@ -133,7 +133,7 @@ jobs:
               echo "The following vulnerabilities were found in the filesystem:"  >> $GITHUB_STEP_SUMMARY
               echo "<details><summary>Click to expand</summary>" >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
-              cat grype_report.md >> $GITHUB_STEP_SUMMARY
+              cat grype_fs_report.md >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "</details>" >> $GITHUB_STEP_SUMMARY
             }
