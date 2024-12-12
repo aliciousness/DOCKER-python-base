@@ -46,13 +46,15 @@ jobs:
         run: |
           docker build -t scan:${{ env.slug }} -f ${{ env.dockerfile_path }} .
 
-      - name: Install Grype
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
-
-      - name: Scan Docker image with Grype
-        run: |
-          grype scan:${{ env.slug }} -o json > grype_results.json
+      - name: Scan Docker Image with Grype
+        uses: anchore/scan-action@v4
+        with:
+          image: scan:${{ env.slug }}
+          fail-build: false
+          severity-cutoff: high
+          only-fixed: true
+          output-format: json
+          output-file: grype_report.json
 
       - name: Convert Grype Results to Markdown
         run: |
@@ -63,7 +65,7 @@ jobs:
             * **Severity**: \(.vulnerability.severity)
             * **Installed Version**: \(.artifact.version)
             * **Fixed Version**: \(.vulnerability.fix.state // "N/A")"
-          ' grype_results.json > grype_report.md
+          ' grype_report.json > grype_report.md
 
       - name: Display scan results
         if: always()
@@ -98,24 +100,26 @@ jobs:
           short_slug=$(echo "${{ env.branch_name }}" | sed -e "s/feature/f/" | sed 's/[\/:.]/-/g' | cut -c -20 | sed -e "s/-$//" )
           echo "slug=${short_slug}" >> $GITHUB_ENV
 
-      - name: Install Clairctl
-        run: |
-          curl -sSfL https://github.com/quay/clair/releases/latest/download/clairctl-linux-amd64.tar.gz | tar -xz -C /usr/local/bin
+      - name: Scan Docker Image with Grype
+        uses: anchore/scan-action@v4
+        with:
+          path: "."
+          fail-build: false
+          severity-cutoff: high
+          only-fixed: true
+          output-format: json
+          output-file: grype_report.json
 
-      - name: Scan Filesystem with Clairctl
-        run: |
-          clairctl filesystem . --report-path clair_results.json
-
-      - name: Convert Clair Results to Markdown
+      - name: Convert Grype Results to Markdown
         run: |
           jq -r '
-            .vulnerabilities[] |
-            "* **Type**: \(.type)
-            * **ID**: \(.id)
-            * **Check**: \(.check)
-            * **Severity**: \(.severity)
-            * **Message**: \(.message)"
-          ' clair_results.json > clair_fs_report.md
+            .matches[] |
+            "* **Package**: \(.artifact.name)
+            * **ID**: \(.vulnerability.id)
+            * **Severity**: \(.vulnerability.severity)
+            * **Installed Version**: \(.artifact.version)
+            * **Fixed Version**: \(.vulnerability.fix.state // "N/A")"
+          ' grype_report.json > grype_report.md
 
       - name: Display Repo filesystem scan results
         if: always()
@@ -129,7 +133,7 @@ jobs:
               echo "The following vulnerabilities were found in the filesystem:"  >> $GITHUB_STEP_SUMMARY
               echo "<details><summary>Click to expand</summary>" >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
-              cat clair_fs_report.md >> $GITHUB_STEP_SUMMARY
+              cat grype_report.md >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "</details>" >> $GITHUB_STEP_SUMMARY
             }
