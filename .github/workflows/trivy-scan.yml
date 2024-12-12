@@ -101,7 +101,7 @@ jobs:
           echo "slug=${short_slug}" >> $GITHUB_ENV
 
       - name: Scan Docker Image with Grype
-        id: grype
+        id: grype_fs
         uses: anchore/scan-action@v5.3.0
         with:
           path: "."
@@ -119,7 +119,7 @@ jobs:
             * **Severity**: \(.vulnerability.severity)
             * **Installed Version**: \(.artifact.version)
             * **Fixed Version**: \(.vulnerability.fix.state // "N/A")"
-          ' ${{ steps.grype.outputs.json }} > grype_fs_report.md
+          ' ${{ steps.grype_fs.outputs.json }} > grype_fs_report.md
 
       - name: Display Repo filesystem scan results
         if: always()
