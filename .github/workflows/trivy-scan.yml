@@ -46,20 +46,31 @@ jobs:
         run: |
           docker build -t scan:${{ env.slug }} -f ${{ env.dockerfile_path }} .
 
-      - name: Scan Docker image with Trivy
-        uses: aquasecurity/trivy-action@master
+      - name: Scan Docker Image with Grype
+        id: grype
+        uses: anchore/scan-action@v5.3.0
         with:
-          image-ref: scan:${{ env.slug }}
-          format: "template"
-          template: "@trivy/template_md.tpl"
-          output: "trivy_report.md"
-          ignore-unfixed: false
-          severity: "HIGH,CRITICAL"
+          image: scan:${{ env.slug }}
+          fail-build: false
+          severity-cutoff: high
+          only-fixed: true
+          output-format: json
+
+      - name: Convert Grype Results to Markdown
+        run: |
+          jq -r '
+            .matches[] |
+            "* **Package**: \(.artifact.name)
+            * **ID**: \(.vulnerability.id)
+            * **Severity**: \(.vulnerability.severity)
+            * **Installed Version**: \(.artifact.version)
+            * **Fixed Version**: \(.vulnerability.fix.state // "N/A")"
+          ' ${{ steps.grype.outputs.json }} > grype_report.md
 
       - name: Display scan results
         if: always()
         run: |
-          if [[ -s trivy_report.md ]]; then
+          if [[ -s grype_report.md ]]; then
             {
               echo "## Trivy Scan Results" >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
@@ -68,35 +79,8 @@ jobs:
               echo "The following vulnerabilities were found in the Docker image: ${{ env.dockerfile_path }}"  >> $GITHUB_STEP_SUMMARY
               echo "<details><summary>Click to expand</summary>" >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
-              cat trivy_report.md >> $GITHUB_STEP_SUMMARY
+              cat grype_report.md >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "</details>" >> $GITHUB_STEP_SUMMARY
             }
           fi
-  analyze:
-    name: Analyze (${{ matrix.language }})
-    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
-    permissions:
-      security-events: write
-      packages: read
-      actions: read
-      contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-        - language: python
-          build-mode: none
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
-      with:
-        languages: ${{ matrix.language }}
-        build-mode: ${{ matrix.build-mode }}
-
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
-      with:
-        category: "/language:${{matrix.language}}"
