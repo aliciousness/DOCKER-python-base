@@ -73,47 +73,30 @@ jobs:
               echo "</details>" >> $GITHUB_STEP_SUMMARY
             }
           fi
-  fs_scan:
-    runs-on: ubuntu-latest
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - language: python
+          build-mode: none
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        build-mode: ${{ matrix.build-mode }}
 
-      - name: Get branch name
-        id: get_branch
-        run: echo "branch_name=${GITHUB_HEAD_REF}" >> $GITHUB_ENV
-
-      - name: Shorten slug
-        id: shorten
-        run: |
-          short_slug=$(echo "${{ env.branch_name }}" | sed -e "s/feature/f/" | sed 's/[\/:.]/-/g' | cut -c -20 | sed -e "s/-$//" )
-          echo "slug=${short_slug}" >> $GITHUB_ENV
-
-      - name: Scan filesystem with Trivy
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: "fs"
-          format: "template"
-          template: "@trivy/template_md.tpl"
-          output: "trivy_fs_report.md"
-          ignore-unfixed: true
-          scanners: "vuln,secret,config"
-          severity: "HIGH,CRITICAL"
-
-      - name: Display Repo filesystem scan results
-        if: always()
-        run: |
-          if [[ -s trivy_fs_report.md ]]; then
-            {
-              echo "## Trivy Filesystem Scan Results" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
-              echo "### Summary" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
-              echo "The following vulnerabilities were found in the filesystem:"  >> $GITHUB_STEP_SUMMARY
-              echo "<details><summary>Click to expand</summary>" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
-              cat trivy_fs_report.md >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
-              echo "</details>" >> $GITHUB_STEP_SUMMARY
-            }
-          fi
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{matrix.language}}"
