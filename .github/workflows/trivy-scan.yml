@@ -110,6 +110,8 @@ jobs:
           only-fixed: true
           output-format: json
 
+      - run: cat ${{ steps.grype_fs.outputs.json }}
+
       - name: Convert Grype Results to Markdown
         run: |
           jq -r '
