@@ -124,8 +124,6 @@ jobs:
       - name: Display Repo filesystem scan results
         if: always()
         run: |
-          if [[ -s grype_fs_report.md ]]; then
-            {
               echo "## Trivy Filesystem Scan Results" >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "### Summary" >> $GITHUB_STEP_SUMMARY
@@ -136,5 +134,3 @@ jobs:
               cat grype_fs_report.md >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "</details>" >> $GITHUB_STEP_SUMMARY
-            }
-          fi
