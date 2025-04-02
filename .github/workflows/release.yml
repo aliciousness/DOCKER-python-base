@@ -5,7 +5,8 @@ on:
     types: [released]
 
 env:
-  DOCKER_DEBIAN_PATH: 3.12/bookworm/Dockerfile
+  DOCKER_DEBIAN_PATH: /bookworm/Dockerfile
+  PYTHON_VERSION: 3.12
 
 jobs:
   build-and-push:
@@ -91,14 +92,14 @@ jobs:
           docker buildx build --no-cache \
             --build-arg IMAGE_VERSION=${{ env.TAG }} \
             --platform linux/amd64,linux/arm64 \
-            -t aliciousness/python-base:${{ env.TAG }}-3.11-bookworm-python \
-            -f  ${{ env.DOCKER_DEBIAN_PATH }} \
+            -t aliciousness/python-base:${{ env.TAG }}-${{ env.PYTHON_VERSION }}-bookworm-python \
+            -f  ${{ env.PYTHON_VERSION }}/${{ env.DOCKER_DEBIAN_PATH }} \
             --push .
 
       - name: tag ${{ env.python_version }}-debian
         run: |
           docker buildx imagetools create --tag aliciousness/python-base:${{ env.python_version }}-debian \
-          aliciousness/python-base:${{ env.TAG }}-3.11-bookworm-python
+          aliciousness/python-base:${{ env.TAG }}-${{ env.PYTHON_VERSION }}-bookworm-python
 
   trigger-badges:
     needs: build-and-push
