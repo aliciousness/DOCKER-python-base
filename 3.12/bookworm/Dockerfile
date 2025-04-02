@@ -1,4 +1,4 @@
-FROM python:3.11-bookworm AS base
+FROM python:3.12-bookworm AS base
 
 LABEL maintainer="Richard Craddock richard.craddock@gce.com"
 LABEL version=$IMAGE_VERSION

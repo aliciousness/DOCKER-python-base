@@ -1,9 +1,11 @@
 name: Build and Push Docker Image
 
 on:
-  push:
-    tags:
-      - "v*"
+  release:
+    types: [released]
+
+env:
+  - DOCKER_DEBIAN_PATH: 3.12/bookworm/Dockerfile
 
 jobs:
   build-and-push:
@@ -90,10 +92,26 @@ jobs:
             --build-arg IMAGE_VERSION=${{ env.TAG }} \
             --platform linux/amd64,linux/arm64 \
             -t aliciousness/python-base:${{ env.TAG }}-3.11-bookworm-python \
-            -f  3.11/bookworm/Dockerfile \
+            -f  ${{ env.DOCKER_DEBIAN_PATH }} \
             --push .
 
       - name: tag ${{ env.python_version }}-debian
         run: |
           docker buildx imagetools create --tag aliciousness/python-base:${{ env.python_version }}-debian \
           aliciousness/python-base:${{ env.TAG }}-3.11-bookworm-python
+
+  trigger-badges:
+    needs: atlantis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Badges Workflow
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.WORKFLOW_PAT }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'badges.yml',
+              ref: 'main'
+            })
