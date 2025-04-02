@@ -62,3 +62,8 @@ jobs:
             -t aliciousness/python-base:prerelease-${{ env.TAG }} \
             -f  ${{env.dockerfile_path}} \
             --push .
+
+      - name: Tag just preleasse
+        run: |
+          docker tag aliciousness/python-base:prerelease-${{ env.TAG }} aliciousness/python-base:prerelease
+          docker push aliciousness/python-base:prerelease

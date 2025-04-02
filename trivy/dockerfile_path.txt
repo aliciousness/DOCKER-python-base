@@ -1,1 +1,1 @@
-3.13/bookworm-slim/Dockerfile
+3.12/bookworm-slim/Dockerfile
