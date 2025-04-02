@@ -98,7 +98,7 @@ jobs:
       - name: tag ${{ env.python_version }}-debian
         run: |
           docker buildx imagetools create --tag aliciousness/python-base:${{ env.python_version }}-debian \
-          aliciousness/python-base:${{ env.TAG }}-${{ env.PYTHON_VERSION }}-bookworm-python
+          aliciousness/python-base:${{ env.TAG }}-${{ env.python_version }}-bookworm-python
 
   trigger-badges:
     needs: build-and-push
