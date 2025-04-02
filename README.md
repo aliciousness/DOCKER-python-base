@@ -1,6 +1,6 @@
 # Docker-python-base
 [![Docker Pulls](https://img.shields.io/badge/Docker%20Pulls-381-blue)](https://hub.docker.com/r/aliciousness/python-base)
-[![Latest Release](https://img.shields.io/badge/release-v0.3.5-brightgreen)](https://github.com/aliciousness/ACTION-latest-release-badge/releases)
+[![Latest Release](https://img.shields.io/badge/release-v0.2.4-brightgreen)](https://github.com/aliciousness/ACTION-latest-release-badge/releases)
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/aliciousness)
 <!-- [![Docker Image Size (tag)]() -->
 <!-- ![Build Status](https://img.shields.io/github/actions/workflow/status/aliciousness/python-base/release.yml?branch=main)]
