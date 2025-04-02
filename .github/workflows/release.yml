@@ -5,7 +5,7 @@ on:
     types: [released]
 
 env:
-  - DOCKER_DEBIAN_PATH: 3.13/bookworm/Dockerfile
+  - DOCKER_DEBIAN_PATH: 3.12/bookworm/Dockerfile
 
 jobs:
   build-and-push:
