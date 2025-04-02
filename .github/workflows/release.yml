@@ -101,7 +101,7 @@ jobs:
           aliciousness/python-base:${{ env.TAG }}-3.11-bookworm-python
 
   trigger-badges:
-    needs: atlantis
+    needs: build-and-push
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Badges Workflow
