@@ -5,6 +5,9 @@ LABEL version=$IMAGE_VERSION
 ARG IMAGE_VERSION
 ENV IMAGE_VERSION=$IMAGE_VERSION
 
+# keep the container alive by default
+ENV KEEP_ALIVE=true
+
 # Disable interaction
 ENV DEBIAN_FRONTEND=noninteractive
 
