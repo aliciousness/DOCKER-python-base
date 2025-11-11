@@ -1,37 +1,61 @@
 FROM python:3.13-slim-trixie AS base
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
 LABEL maintainer="Richard Craddock richard.craddock@gce.com"
 LABEL version=$IMAGE_VERSION
 ARG IMAGE_VERSION
 ENV IMAGE_VERSION=$IMAGE_VERSION
 
-# Installing necessary packages to install Tensorflow
-RUN apt-get update && apt-get install -y --no-install-recommends \
-  build-essential \
-  python3-dev \
-  libhdf5-dev \
-  pkg-config \
-  && apt-get clean \
-  && rm -rf /var/lib/apt/lists/*
+# keep the container alive by default
+ENV KEEP_ALIVE=true
 
-# Upgrade pip3 and install all python dependencies from requirements.txt file
-COPY ./requirements.txt /tmp/requirements.txt
-RUN pip3 install --no-cache-dir --upgrade -r /tmp/requirements.txt
+# Disable interaction
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Copy over all scripts to /usr/local/bin/ and make them executable and move gunicorn_conf.py to root
-COPY scripts/* /usr/local/bin/
-RUN chmod +x /usr/local/bin/* && mv /usr/local/bin/gunicorn_conf.py /gunicorn_conf.py
+# Set timezone
+ENV TZ=UTC
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# copy over app directory with main.py and set to workdir
-COPY ./app /app
+WORKDIR /app
 
-ENV PYTHONPATH=/app
+# seting an arg and then setting that arg as an environment variable
+ARG RECREATE_REQUIREMENTS_ARG
+ENV RECREATE_REQUIREMENTS=$RECREATE_REQUIREMENTS_ARG
 
-EXPOSE 80
 
-# Run the start script, it will check for an /app/prestart.sh script (e.g. for migrations)
-# And then will start Gunicorn with Uvicorn
-CMD ["start-gunicorn"]
+# Update upgrade and install dependencies
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* \
+    && apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install --no-install-recommends -ymq \
+    wget \
+    curl \
+    gettext \
+    git \
+    unzip \
+    vim \
+    zip \
+    nmap \
+    iputils-ping \
+    ca-certificates \
+    gcc \
+    libc6-dev \
+    libpq-dev 
+
+# Install the root CA certificate onto the container in the directory needed for the update-ca-certificates command
+# `update-ca-certificates` updates locally trusted CA certificates,located on the container at /usr/local/share/ca-certificates. 
+# NOTE: This path and command are known to work with Debian and Debain-based distributions.If using outside of that, the command and path may need to be adjusted.
+ENV CA_URL=https://gist.githubusercontent.com/aliciousness/c61936e29b3fb4b07c33aa25ae330f6a/raw/e950632b12d809f1ecb6d802e768e3fbbe42d296/gistfile1.txt
+RUN curl $CA_URL > /usr/local/share/ca-certificates/root_ca.crt && update-ca-certificates
+
+# Make zsh the default shell and install oh-my-zsh
+# Install syntax highlighting and powerlevel10k plugins for oh-my-zsh
+RUN apt update && apt install -y zsh \
+    && chsh -s $(which zsh) \
+    && sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" \
+    && git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k \
+    && git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+
+COPY scripts/entrypoint.sh /usr/local/bin/entrypoint
+RUN chmod +x /usr/local/bin/* 
+
+ENTRYPOINT [ "entrypoint" ]
