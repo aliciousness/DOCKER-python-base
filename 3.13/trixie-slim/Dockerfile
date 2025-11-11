@@ -1,4 +1,4 @@
-FROM aliciousness/python-base:3.13-debian AS base
+FROM python:3.13-slim-trixie AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1

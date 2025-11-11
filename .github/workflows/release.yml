@@ -13,7 +13,20 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
-        variant: ["bookworm", "bookworm-slim"]
+        variant: ["bookworm", "bookworm-slim", "trixie", "trixie-slim"]
+        exclude:
+          - python-version: "3.11"
+            variant: "trixie"
+          - python-version: "3.11"
+            variant: "trixie-slim"
+          - python-version: "3.12"
+            variant: "trixie"
+          - python-version: "3.12"
+            variant: "trixie-slim"
+          - python-version: "3.13"
+            variant: "bookworm"
+          - python-version: "3.13"
+            variant: "bookworm-slim"
 
     steps:
       - name: Checkout repository
