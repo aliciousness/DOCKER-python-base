@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.13"]
-        variant: ["bookworm-slim"]
+        variant: ["trixie-slim"]
 
     steps:
       - name: Checkout repository
