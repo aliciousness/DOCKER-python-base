@@ -19,3 +19,4 @@ if [ "$KEEP_ALIVE" = "true"]; then
   while true; do
     sleep infinity
   done
+fi
