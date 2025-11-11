@@ -5,7 +5,7 @@ on:
     types: [released]
 
 env:
-  LATEST: "3.12"
+  LATEST: "3.13,trixie-slim"
 
 jobs:
   build-and-push:
@@ -48,6 +48,11 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+          # Parse LATEST env var
+          IFS=',' read -r LATEST_VERSION LATEST_VARIANT <<< "${{ env.LATEST }}"
+          echo "latest_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          echo "latest_variant=$LATEST_VARIANT" >> $GITHUB_OUTPUT
+
           # Determine if this is a slim variant
           if [[ "${{ matrix.variant }}" == *"slim"* ]]; then
             SLIM_SUFFIX="-slim"
@@ -67,10 +72,9 @@ jobs:
           images: aliciousness/uvicorn-gunicorn
           tags: |
             type=raw,value=${{ steps.meta.outputs.version }}-${{ matrix.python-version }}-${{ matrix.variant }}
-            type=raw,value=${{ matrix.python-version }}${{ steps.meta.outputs.slim_suffix }},enable=${{ matrix.variant == 'bookworm-slim' }}
-            type=raw,value=${{ matrix.python-version }}-debian,enable=${{ matrix.variant == 'bookworm' }}
-            type=raw,value=${{ steps.meta.outputs.version }},enable=${{ matrix.python-version == '3.12' && matrix.variant == 'bookworm-slim' }}
-            type=raw,value=latest,enable=${{ matrix.python-version == env.LATEST && matrix.variant == 'bookworm-slim' }}
+            type=raw,value=${{ matrix.python-version }}${{ steps.meta.outputs.slim_suffix }}
+            type=raw,value=${{ steps.meta.outputs.version }},enable=${{ matrix.python-version == steps.meta.outputs.latest_version && matrix.variant == steps.meta.outputs.latest_variant }}
+            type=raw,value=latest,enable=${{ matrix.python-version == steps.meta.outputs.latest_version && matrix.variant == steps.meta.outputs.latest_variant }}
           labels: |
             org.opencontainers.image.title=uvicorn-gunicorn
             org.opencontainers.image.description=Docker image with Uvicorn managed by Gunicorn for high-performance FastAPI web applications
