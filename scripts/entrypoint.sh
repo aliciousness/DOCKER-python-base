@@ -12,9 +12,10 @@ fi
 # Execute the command passed to the docker container
 echo "Starting the command execution from docker-compose..."
 "$@"
-echo "Command execution finished, entering the loop..."
 
-# After the command execution, keep the container alive with a loop
-while true; do
-  sleep infinity
-done
+if [ "$KEEP_ALIVE" = "true"]; then
+  echo "Command execution finished, entering the loop..."
+  # After the command execution, keep the container alive with a loop
+  while true; do
+    sleep infinity
+  done
