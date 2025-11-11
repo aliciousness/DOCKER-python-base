@@ -53,13 +53,13 @@ jobs:
           echo "latest_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
           echo "latest_variant=$LATEST_VARIANT" >> $GITHUB_OUTPUT
 
-          # Determine if this is a slim variant
+          # Determine variant suffix for tagging
           if [[ "${{ matrix.variant }}" == *"slim"* ]]; then
-            SLIM_SUFFIX="-slim"
+            VARIANT_TAG="${{ matrix.python-version }}"
           else
-            SLIM_SUFFIX=""
+            VARIANT_TAG="${{ matrix.python-version }}-debian"
           fi
-          echo "slim_suffix=$SLIM_SUFFIX" >> $GITHUB_OUTPUT
+          echo "variant_tag=$VARIANT_TAG" >> $GITHUB_OUTPUT
 
           # Set Dockerfile path
           DOCKERFILE_PATH="${{ matrix.python-version }}/${{ matrix.variant }}/Dockerfile"
@@ -72,7 +72,7 @@ jobs:
           images: aliciousness/uvicorn-gunicorn
           tags: |
             type=raw,value=${{ steps.meta.outputs.version }}-${{ matrix.python-version }}-${{ matrix.variant }}
-            type=raw,value=${{ matrix.python-version }}${{ steps.meta.outputs.slim_suffix }}
+            type=raw,value=${{ steps.meta.outputs.variant_tag }}
             type=raw,value=${{ steps.meta.outputs.version }},enable=${{ matrix.python-version == steps.meta.outputs.latest_version && matrix.variant == steps.meta.outputs.latest_variant }}
             type=raw,value=latest,enable=${{ matrix.python-version == steps.meta.outputs.latest_version && matrix.variant == steps.meta.outputs.latest_variant }}
           labels: |
