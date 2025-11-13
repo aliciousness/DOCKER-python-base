@@ -1,0 +1,63 @@
+name: Simple Docker build ci
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  ci:
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+        variant: ["bookworm", "bookworm-slim", "trixie", "trixie-slim"]
+        exclude:
+          - python-version: "3.11"
+            variant: "trixie"
+          - python-version: "3.11"
+            variant: "trixie-slim"
+          - python-version: "3.12"
+            variant: "trixie"
+          - python-version: "3.12"
+            variant: "trixie-slim"
+          - python-version: "3.13"
+            variant: "bookworm"
+          - python-version: "3.13"
+            variant: "bookworm-slim"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Docker metadata
+        id: docker_meta
+        uses: docker/metadata-action@v5
+        with:
+          images: aliciousness/python-base
+          tags: |
+            type=raw,value=${{ steps.meta.outputs.version }}-${{ matrix.python-version }}-${{ matrix.variant }}
+            type=raw,value=${{ steps.meta.outputs.variant_tag }}
+            type=raw,value=${{ steps.meta.outputs.version }},enable=${{ matrix.python-version == steps.meta.outputs.latest_version && matrix.variant == steps.meta.outputs.latest_variant }}
+            type=raw,value=latest,enable=${{ matrix.python-version == steps.meta.outputs.latest_version && matrix.variant == steps.meta.outputs.latest_variant }}
+          labels: |
+            org.opencontainers.image.title=python-base
+            org.opencontainers.image.description=Docker image with Uvicorn managed by Gunicorn for high-performance FastAPI web applications
+            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
+            org.opencontainers.image.vendor=aliciousness
+            python.version=${{ matrix.python-version }}
+            image.variant=${{ matrix.variant }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ steps.meta.outputs.dockerfile_path }}
+          platforms: linux/amd64,linux/arm64
+          push: false
+          tags: ${{ steps.docker_meta.outputs.tags }}
+          labels: ${{ steps.docker_meta.outputs.labels }}
+          build-args: |
+            IMAGE_VERSION=${{ steps.meta.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          no-cache: false
