@@ -38,12 +38,12 @@ jobs:
 
       - name: Check if tag exists
         run: |
-          if git rev-parse "v${{ steps.tag-version.outputs.tag }}" >/dev/null 2>&1; then
+          if git rev-parse "${{ steps.tag-version.outputs.tag }}" >/dev/null 2>&1; then
             echo "❌ Error: Tag ${{ steps.tag-version.outputs.tag }} already exists!"
             echo "Please update the version in the VERSION file to a new version."
             exit 1
           else
-            echo "✅ Tag v${{ steps.tag-version.outputs.tag }} does not exist, proceeding with release"
+            echo "✅ Tag ${{ steps.tag-version.outputs.tag }} does not exist, proceeding with release"
           fi
 
       - name: Generate changelog
