@@ -1,4 +1,4 @@
-name: Pre-Release Atlantis
+name: Pre-Release
 
 on:
   release:

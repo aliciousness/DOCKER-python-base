@@ -97,4 +97,5 @@ jobs:
 
             ${{ steps.previous-tag.outputs.previous_tag && format('**Full Changelog**: https://github.com/{0}/compare/{1}...{2}', github.repository, steps.previous-tag.outputs.previous_tag, steps.tag-version.outputs.tag) || '' }}
           make_latest: true
-          generate_release_notes: true
+          generate_release_notes: false
+          token: ${{ secrets.WORKFLOW_PAT }}
