@@ -101,7 +101,7 @@ jobs:
           cache-to: type=gha,mode=max
           no-cache: false
 
-  trigger-badges:
+  update-badges:
     needs: build-and-push
     permissions:
       id-token: write
