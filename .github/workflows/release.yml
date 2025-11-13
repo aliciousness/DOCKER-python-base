@@ -105,6 +105,6 @@ jobs:
     needs: build-and-push
     permissions:
       id-token: write
-      contents: read
+      contents: write
     uses: ./.github/workflows/badges.yml
     secrets: inherit
