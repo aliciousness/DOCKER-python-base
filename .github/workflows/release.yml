@@ -101,21 +101,10 @@ jobs:
           cache-to: type=gha,mode=max
           no-cache: false
 
-  trigger-badges:
+  update-badges:
     needs: build-and-push
-    runs-on: ubuntu-latest
     permissions:
       id-token: write
-      contents: read
-    steps:
-      - name: Trigger Badges Workflow
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.WORKFLOW_PAT }}
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'badges.yml',
-              ref: 'main'
-            })
+      contents: write
+    uses: ./.github/workflows/badges.yml
+    secrets: inherit

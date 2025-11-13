@@ -1,6 +1,7 @@
 name: Update README Labels
 
 on:
+  workflow_call:
   schedule:
     # Monthly CRON job
     - cron: "0 0 1 * *"
