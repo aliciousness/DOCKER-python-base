@@ -1,0 +1,100 @@
+name: Create Release from PR Merge
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+    paths:
+      - "VERSION"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch full history for changelog generation
+
+      - name: Get tag & version
+        id: tag-version
+        run: |
+          VERSION=$(cat VERSION)
+          if [[ ! $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Error: VERSION file must start with 'v' followed by semantic version (e.g., v1.2.3)"
+            exit 1
+          fi
+          TAG=$VERSION
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Check if tag exists
+        run: |
+          if git rev-parse "v${{ steps.tag-version.outputs.tag }}" >/dev/null 2>&1; then
+            echo "❌ Error: Tag ${{ steps.tag-version.outputs.tag }} already exists!"
+            echo "Please update the version in the VERSION file to a new version."
+            exit 1
+          else
+            echo "✅ Tag v${{ steps.tag-version.outputs.tag }} does not exist, proceeding with release"
+          fi
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get the previous tag
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+          if [ -z "$PREVIOUS_TAG" ]; then
+            echo "No previous tags found, generating changelog from first commit"
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --reverse)
+          else
+            echo "Previous tag: $PREVIOUS_TAG"
+            CHANGELOG=$(git log $PREVIOUS_TAG..HEAD --pretty=format:"- %s (%h)" --reverse)
+          fi
+
+          # If no commits since last tag, create a default changelog
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG="- Version bump to ${{ steps.tag-version.outputs.version }}"
+          fi
+
+          # Escape newlines and quotes for GitHub output
+          {
+            echo "changelog<<EOF"
+            echo "$CHANGELOG"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Create Git Tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@richardcraddock.me"
+          git tag -a "${{ steps.tag-version.outputs.tag }}" -m "Release ${{ steps.tag-version.outputs.version }}"
+          git push origin "${{ steps.tag-version.outputs.tag }}"
+
+      - name: Get previous tag for changelog comparison
+        id: previous-tag
+        run: |
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 "${{ steps.tag-version.outputs.tag }}^" 2>/dev/null || echo "")
+          echo "previous_tag=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag-version.outputs.tag }}
+          name: ${{ steps.tag-version.outputs.tag }}
+          body: |
+            ## What's Changed
+
+            ${{ steps.changelog.outputs.changelog }}
+
+            ${{ steps.previous-tag.outputs.previous_tag && format('**Full Changelog**: https://github.com/{0}/compare/{1}...{2}', github.repository, steps.previous-tag.outputs.previous_tag, steps.tag-version.outputs.tag) || '' }}
+          make_latest: true
+          generate_release_notes: true
