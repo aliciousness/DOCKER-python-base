@@ -71,4 +71,4 @@ jobs:
             exit 0
           fi
           git commit -m "Update README labels"
-          git push origin main
+          git push origin/main
