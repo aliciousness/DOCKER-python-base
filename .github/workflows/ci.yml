@@ -26,7 +26,6 @@ jobs:
             variant: "bookworm-slim"
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
       contents: read
     steps:
       - uses: actions/checkout@v4
