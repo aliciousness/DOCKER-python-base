@@ -25,6 +25,9 @@ jobs:
           - python-version: "3.13"
             variant: "bookworm-slim"
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx
