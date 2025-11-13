@@ -6,7 +6,7 @@ ARG IMAGE_VERSION
 ENV IMAGE_VERSION=$IMAGE_VERSION
 
 # keep the container alive by default
-ENV KEEP_ALIVE=true
+ENV CONTAINER_KEEP_ALIVE=true
 
 # Disable interaction
 ENV DEBIAN_FRONTEND=noninteractive

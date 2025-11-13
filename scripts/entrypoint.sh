@@ -13,7 +13,7 @@ fi
 echo "Starting the command execution from docker-compose..."
 "$@"
 
-if [ "$KEEP_ALIVE" = "true" ]; then
+if [ "$CONTAINER_KEEP_ALIVE" = "true" ]; then
   echo "Command execution finished, entering the loop..."
   # After the command execution, keep the container alive with a loop
   while true; do
